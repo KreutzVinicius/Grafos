@@ -1,5 +1,6 @@
 import queue
 import sys
+from itertools import combinations
 
 
 class Vertex:
@@ -77,20 +78,43 @@ class Graph:
                 if (vid == vertex1 and wid == vertex2):
                     return(v.get_weight(w))
 
-    def getDegree(self):
+    def getAdjacencyMatrix(self):
+        matrix = self.geraMatriz()
+        for i, u in enumerate(self):
+            for j, v in enumerate(self):
+                if (self.getAdjacency(u.id, v.id) != None):
+                    matrix[i][j] = g.getAdjacency(u.id, v.id)
+                else:
+                    matrix[i][j] = float("inf")
+        return matrix
+
+    def geraMatriz(self):
+        return [[" "]*self.getNumVertex() for _ in range(self.getNumVertex())]
+
+    def getDegree(self, target):
         count = 0
-        target = (
-            (input(("Digite o nome do vertice que pretende verificar o grau\n"))))
         for v in g:
-            if (v.get_id() == target):
-                print(g.vert_dict[v.get_id()])
+            if (v == target):
+                for u in v.getAdjacent():
+                    count = count + 1
+                return count
 
     def getEdges(self):
-        for v in g:
+        done = []
+        edges = []
+        for v in self:
+            done.append(v.id)
             for w in v.get_connections():
+                test = 0
                 vid = v.get_id()
                 wid = w.get_id()
-                print('( %s , %s, %3d)' % (vid, wid, v.get_weight(w)))
+
+                for u in done:
+                    if u == w.id:
+                        test = 1
+                if test == 0:
+                    edges.append([vid, wid, v.get_weight(w)])
+        return edges
 
     def getAdjacents(self):
         for v in g:
@@ -134,11 +158,13 @@ class Graph:
         return count/2
 
     def isComplete(self):
-        edges = self.getEdgeNumber()
-        if (edges != (self.num_vertices * self.num_vertices-1)/2):
-            print("o grafo nao é completo")
-            return
-        print("o grafo é completo")
+        for v in self:
+            numConexoes = 0
+            for w in v.get_connections():
+                numConexoes += 1
+            if numConexoes != self.num_vertices-1:
+                return 'Não é completo'
+        return 'É completo'
 
     def setAllUnexplored(self):
         for v in self:
@@ -156,7 +182,7 @@ class Graph:
                 if (x.explored == 0):
                     x.explored = 1
                     q.put(x)
-                    print("%s foi explorado" % (x))
+                    # print("%s foi explorado" % (x))
 
     def DeepSearch(self, vert):
         self.setAllUnexplored()
@@ -165,8 +191,8 @@ class Graph:
         while (len(stack) != 0):
             vert = stack.pop()
             vert.explored = 1
-            print("%s foi explorado" % (vert))
-            for x in vert.adjacent:
+            # print("%s foi explorado" % (vert))
+            for x in self:
                 if(x.explored == 0):
                     stack.append(x)
 
@@ -239,8 +265,133 @@ class Graph:
                         pred[i][j] = w.id
         return d, pred
 
-    def geraMatriz(self):
-        return [[" "]*self.getNumVertex() for _ in range(self.getNumVertex())]
+    def isEulerian(self):
+        if self.isConected() == 0:
+            return 0
+        impares = 0
+        for v in self:
+            if (self.getDegree(v) % 2) != 0:
+                impares += 1
+        print(impares)
+        if impares == 0:
+            print("ciclo")
+        if impares == 2:
+            print("caminho")
+        if impares > 2:
+            print("nao é Euleriano")
+
+    def isConected(self):
+        # somente grafos nao direcionados
+        self.setAllUnexplored()
+        u = self.getAnyNode()
+        self.DeepSearch(u)
+        for v in self:
+            if v.explored == 0:
+                return 0
+            return 1
+
+    def getAnyNode(self):
+        for v in self:
+            if self.getDegree(v) > 0:
+                return v
+
+    def Hierholezer(self):
+        if self.isConected() == 1:
+            self.setAllUnexplored()
+            impares = 0
+            for v in self:
+                if (self.getDegree(v) % 2) != 0:
+                    impares += 1
+                    aux = v
+
+            # if impares == 0:
+            #     # ciclo nao está funcionando, nao imprime os nós onde ja passou
+            #     print("Ciclo de Euler:")
+            #     self.printEuler(self.getAnyNode())
+            if impares == 2:
+                print("Caminho de Euler:")
+                self.printEuler(aux)
+            else:
+                print("Caminho nao existe")
+
+    def printEuler(self, vert):
+        c = []
+        e = []
+        explored = []
+
+        c.insert(0, vert)
+        vert.explored = 1
+
+        while len(c):
+            u = c[0].getAdjacent()
+            aux = 0
+            for v in u:
+                if v.explored == 0:
+                    aux = v
+            if aux == 0:
+                aux = c.pop()
+                e.insert(0, aux)
+            else:
+                c.insert(0, aux)
+                explored.append((u, aux))
+                aux.explored = 1
+
+        for i in e:
+            print(i.id)
+
+    def caixeiro(self):
+        d = self.geraMatriz()
+        for i, u in enumerate(self):
+            for j, v in enumerate(self):
+                if (self.getAdjacency(u.id, v.id) != None):
+                    d[i][j] = g.getAdjacency(u.id, v.id)
+                else:
+                    d[i][j] = float("inf")
+        n = g.getNumVertex()
+        caixeiro = [[float("inf") for _ in range(n)] for __ in range(2**n)]
+        caixeiro[1][0] = 0
+        for tam in range(1, n):
+            for caminho in combinations(range(1, n), tam):
+                caminho = (0,) + caminho
+                k = sum([2**i for i in caminho])
+                for i in caminho:
+                    if i == 0:
+                        continue
+                    for j in caminho:
+                        if j == i:
+                            continue
+                        index_atual = k ^ (2**i)
+                        caixeiro[k][i] = min(caixeiro[k][i],
+                                             caixeiro[index_atual][j] + d[j][i])
+        todos_index = (2**n) - 1
+        return min([(caixeiro[todos_index][i] + d[0][i])
+                    for i in range(n)])
+
+    def Prim(self):
+        adjacencyMatrix = self.getAdjacencyMatrix()
+        key = [float("inf")] * self.getNumVertex()
+        parent = [None] * self.getNumVertex()
+
+        key[0] = 0
+        mstSet = [False] * self.getNumVertex()
+        parent[0] = -1
+
+        for _ in range(self.getNumVertex()):
+            mini = float("inf")
+            for v in range(self.getNumVertex()):
+                if key[v] < mini and mstSet[v] == False:
+                    mini = key[v]
+                    u = v  # index
+            mstSet[u] = True
+            for v in range(self.getNumVertex()):
+                if adjacencyMatrix[u][v] > 0 and mstSet[v] == False and key[v] > adjacencyMatrix[u][v]:
+                    key[v] = adjacencyMatrix[u][v]
+                    parent[v] = u
+
+        print("Ramos necessarios")
+        for i in range(1, self.getNumVertex()):
+            print("(", parent[i], ",", i, ") = ",
+                  adjacencyMatrix[i][parent[i]])
 
 
 if __name__ == '__main__':
@@ -267,28 +418,22 @@ g.add_vertex('id0')
 g.add_vertex('id1')
 g.add_vertex('id2')
 g.add_vertex('id3')
-# g.add_vertex('id4')
-# g.add_edge('id0', 'id1', -1)
-# g.add_edge('id0', 'id2', 4)
-# g.add_edge('id1', 'id2', 3)
-# g.add_edge('id1', 'id3', 2)
-# g.add_edge('id1', 'id4', 2)
-# g.add_edge('id3', 'id2', 5)
-# g.add_edge('id3', 'id1', 1)
-# g.add_edge('id4', 'id3', -3)
+g.add_vertex('id4')
 
-g.add_edge('id0', 'id1', 2)
-g.add_edge('id1', 'id2', 4)
-g.add_edge('id2', 'id3', 5)
-g.add_edge('id3', 'id0', 11)
+g.add_edge("id0", "id1", 15)
+g.add_edge("id0", "id2", 12)
+g.add_edge("id1", "id2", 6)
+g.add_edge("id1", "id3", 13)
+g.add_edge("id1", "id4", 5)
+g.add_edge("id2", "id3", 6)
 
 
 # print(g.getAdjacency('id1', 'id1'))
-
-# g.getDegree()
+# print(g.getDegree('id1'))
 # g.isSubGraph()
-# g.getEdgeNumber()
-# g.isComplete()
+# print(g.getEdgeNumber())
+# print(g.getEdges())
+# print(g.isComplete())
 # g.BreadthSearch(g.get_vertex('id0'))
 # g.DeepSearch(g.get_vertex('id0'))
 
@@ -298,7 +443,6 @@ g.add_edge('id3', 'id0', 11)
 #     g.Dijkstra(v.id)
 #     if aux > g.getmaiordistancia():
 #         aux = g.getmaiordistancia()
-
 # print(aux)
 
 
@@ -306,7 +450,25 @@ g.add_edge('id3', 'id0', 11)
 # for v in g:
 #     print(v.d)
 
-d, p = g.FloydWarshall()
-print(d)
-print("\n")
-print(p)
+# d, p = g.FloydWarshall()
+# print(d)
+# print("\n")
+# print(p)
+
+# g.isEulerian()
+
+# g.Hierholezer()
+
+# txt = input()
+# txt = txt.split()
+# soma = 0
+# for i, x in enumerate(txt):
+#     if i % 2 == 1:
+#         soma = soma + int(x)
+# if g.caixeiro() > soma:
+#     print("menor caminho")
+# else:
+#     print("nao, existe percurso menor")
+# print(g.caixeiro())
+
+g.Prim()
